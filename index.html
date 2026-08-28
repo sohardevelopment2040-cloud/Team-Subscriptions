@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الاشتراكات الشهرية للفريق</title>
+
+    <!-- إعدادات تطبيق الويب التقدمي (PWA) -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0b1120">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="الاشتراكات">
+
+    <!-- مكتبة PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Cairo', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #0b1120;
+            color: #ffffff;
+            padding: 15px;
+            max-width: 600px; /* العرض المخصص للجوال */
+            margin: 0 auto;
+        }
+
+        /* ================= شريط التبويبات ================= */
+        .tabs-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 15px 10px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            line-height: 1.3;
+            background-color: #1e293b;
+            color: #94a3b8;
+            border: 1px solid #334155;
+        }
+
+        .tab-btn.active {
+            background-color: #2563eb;
+            color: #ffffff;
+            border: 1px solid #3b82f6;
+        }
+
+        .view-section { display: none; }
+        .view-section.active { display: block; }
+
+        /* ================= الشاشة الأولى (الداكنة) ================= */
+        .dark-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .dark-header h1 {
+            font-size: 1.5rem;
+            font-weight: 900;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .dark-header p {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            line-height: 1.5;
+            padding: 0 10px;
+        }
+
+        .fee-badge {
+            display: inline-block;
+            background-color: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-top: 8px;
+        }
+
+        /* شبكة الإحصائيات المال والأعداد */
+        .stats-grid-dark {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .stat-box-dark {
+            background-color: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 14px;
+            padding: 12px 10px;
+            text-align: center;
+        }
+
+        .stat-box-dark .num {
+            font-size: 1.5rem;
+            font-weight: 900;
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        .text-blue { color: #3b82f6; }
+        .text-green { color: #10b981; }
+        .text-red { color: #ef4444; }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        /* مربع البحث الداكن */
+        .search-container {
+            margin-bottom: 15px;
+        }
+
+        .search-input {
+            width: 100%;
+            background-color: #0f172a;
+            border: 1px solid #1e293b;
+            padding: 12px 20px;
+            border-radius: 12px;
+            color: white;
+            font-size: 0.95rem;
+            outline: none;
+        }
+        .search-input::placeholder { color: #475569; }
+
+        /* القائمة الداكنة */
+        .members-list {
+            max-height: 380px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+
+        .member-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 15px;
+            background-color: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            cursor: pointer;
+        }
+        .member-row.paid { background-color: #064e3b; border-color: #10b981; }
+
+        .member-info { display: flex; align-items: center; gap: 12px; }
+        .member-num { background: #2563eb; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; }
+        .member-name { font-weight: 600; font-size: 0.95rem; }
+        
+        .status-icon { font-size: 1.2rem; font-weight: bold; }
+        .status-icon.yes { color: #10b981; }
+        .status-icon.no { color: #ef4444; }
+
+        .btn-reset {
+            width: 100%;
+            padding: 12px;
+            background-color: #dc2626;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-bottom: 30px;
+        }
+
+        /* ================= الشاشة الثانية (البيضاء) ================= */
+        .white-screen {
+            background-color: #ffffff;
+            border-radius: 16px;
+            padding: 20px;
+            color: #000;
+        }
+
+        /* الأزرار العمودية */
+        .action-buttons-vertical {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 25px;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 20px;
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: 800;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-whatsapp { background-color: #279b76; }
+        .btn-pdf { background-color: #dc2626; }
+        .btn-print { background-color: #2563eb; }
+
+        /* تصميم ورقة التقرير */
+        .report-paper {
+            background: #ffffff;
+        }
+
+        .report-header {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .report-header h2 {
+            font-size: 1.4rem;
+            color: #1e293b;
+            font-weight: 900;
+            margin-bottom: 5px;
+        }
+
+        .report-header p {
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+        
+        .divider { border-bottom: 2px solid #1e293b; margin: 15px 0; }
+
+        .report-meta {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 10px 12px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #475569;
+            margin-bottom: 15px;
+        }
+
+        .report-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .report-stat-box {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 8px 5px;
+            text-align: center;
+        }
+
+        .report-stat-box .v { font-size: 1.1rem; font-weight: 900; color: #1e293b; }
+        .report-stat-box .l { font-size: 0.7rem; color: #64748b; font-weight: bold; }
+        
+        .v.green { color: #006400; }
+        .v.red { color: #b91c1c; }
+
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 25px;
+        }
+
+        .report-table th {
+            background-color: #1e293b;
+            color: white;
+            padding: 8px;
+            font-size: 0.85rem;
+        }
+
+        .report-table td {
+            padding: 8px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .report-table tr.paid-row { background-color: #ebfbf0; }
+        .report-table tr.unpaid-row { background-color: #fef2f2; }
+
+        .tag-yes { color: #006400; font-weight: 900; text-align: center; } 
+        .tag-no { color: #d32f2f; font-weight: 900; text-align: center; }
+
+        /* التوقيعات الثلاثة */
+        .signatures {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .sig {
+            text-align: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: #1e293b;
+            flex: 1;
+        }
+
+        .sig-line {
+            border-top: 1px solid #64748b;
+            width: 80%;
+            margin: 25px auto 0;
+        }
+
+        @media print {
+            body { background: white; padding: 0; }
+            .tabs-container, .action-buttons-vertical { display: none !important; }
+            #view-preview { display: block !important; }
+            .white-screen { padding: 0; border-radius: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- التبويبات العلوية -->
+    <div class="tabs-container">
+        <button class="tab-btn active" id="btn-tab-edit" onclick="switchTab('edit')">
+            <span>📝 1. تسجيل</span>
+            <span>ومتابعة الدفع</span>
+        </button>
+        <button class="tab-btn" id="btn-tab-preview" onclick="switchTab('preview')">
+            <span>📄 2. معاينة</span>
+            <span>التقرير النهائي (A4)</span>
+        </button>
+    </div>
+
+    <!-- ================= شاشة التسجيل (الداكنة) ================= -->
+    <div id="view-edit" class="view-section active">
+        
+        <div class="dark-header">
+            <h1>⚽ الاشتراكات الشهرية للفريق</h1>
+            <p>حملة تجميع الرسوم لتسديد فواتير الكهرباء وراتب المدرب والعامل والالتزامات الأخرى</p>
+            <div class="fee-badge">💵 قيمة الاشتراك للعضو: 5 ريال عماني</div>
+        </div>
+
+        <div class="divider" style="border-color: #1e293b;"></div>
+
+        <!-- الإحصائيات (الأعداد والأموال) -->
+        <div class="stats-grid-dark">
+            <div class="stat-box-dark">
+                <span class="num text-blue" id="dark-total">45</span>
+                <span class="stat-label">👥 إجمالي الأعضاء</span>
+            </div>
+            <div class="stat-box-dark">
+                <span class="num text-blue" id="dark-target-money">225 ر.ع</span>
+                <span class="stat-label">🎯 المستهدف الكلي</span>
+            </div>
+            <div class="stat-box-dark">
+                <span class="num text-green" id="dark-paid">0</span>
+                <span class="stat-label">✅ عدد المسددين</span>
+            </div>
+            <div class="stat-box-dark">
+                <span class="num text-green" id="dark-paid-money">0 ر.ع</span>
+                <span class="stat-label">💰 إجمالي المحصل</span>
+            </div>
+            <div class="stat-box-dark">
+                <span class="num text-red" id="dark-unpaid">45</span>
+                <span class="stat-label">❌ عدد المتبقين</span>
+            </div>
+            <div class="stat-box-dark">
+                <span class="num text-red" id="dark-unpaid-money">225 ر.ع</span>
+                <span class="stat-label">⏳ المتبقي تحصيله</span>
+            </div>
+        </div>
+
+        <!-- مربع البحث -->
+        <div class="search-container">
+            <input type="text" id="searchInput" class="search-input" placeholder="🔍 ابحث عن اسم العضو هنا...">
+        </div>
+
+        <!-- قائمة الأسماء -->
+        <div class="members-list" id="membersList"></div>
+
+        <button class="btn-reset" onclick="resetData()">⚠️ إعادة تعيين جميع المدفوعات</button>
+    </div>
+
+    <!-- ================= شاشة المعاينة (البيضاء) ================= -->
+    <div id="view-preview" class="view-section">
+        <div class="white-screen">
+            
+            <!-- الأزرار العمودية -->
+            <div class="action-buttons-vertical">
+                <button class="action-btn btn-whatsapp" onclick="shareWhatsAppText()">
+                    💬 مشاركة نص التقرير للواتساب
+                </button>
+                <button class="action-btn btn-pdf" onclick="exportPDF()">
+                    📄 تنزيل ملف PDF
+                </button>
+                <button class="action-btn btn-print" onclick="window.print()">
+                    🖨️ طباعة التقرير
+                </button>
+            </div>
+
+            <!-- الورقة الرسمية -->
+            <div class="report-paper" id="reportContent">
+                
+                <div class="report-header">
+                    <h2>⚽ تقرير الاشتراكات الشهرية</h2>
+                    <p style="margin-top: 5px;">حملة تجميع الرسوم لتسديد فواتير الكهرباء وراتب المدرب والعامل والالتزامات الأخرى</p>
+                    <p style="font-weight: bold; color: #1e3a8a; margin-top: 3px;">(قيمة الاشتراك للفرد: 5 ريال عماني)</p>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="report-meta">
+                    <span id="rep-date">📅 التاريخ: -</span>
+                    <span id="rep-percent">نسبة الإنجاز: 0%</span>
+                </div>
+
+                <!-- إحصائيات التقرير المالي والأعداد -->
+                <div class="report-stats-grid">
+                    <div class="report-stat-box">
+                        <div class="v green" id="rep-paid-money">0 ر.ع</div>
+                        <div class="l">إجمالي المحصل</div>
+                    </div>
+                    <div class="report-stat-box">
+                        <div class="v red" id="rep-unpaid-money">0 ر.ع</div>
+                        <div class="l">المبلغ المتبقي</div>
+                    </div>
+                    <div class="report-stat-box">
+                        <div class="v green" id="rep-paid">0</div>
+                        <div class="l">عدد المسددين</div>
+                    </div>
+                    <div class="report-stat-box">
+                        <div class="v red" id="rep-unpaid">0</div>
+                        <div class="l">عدد المتبقين</div>
+                    </div>
+                </div>
+
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 35px; text-align: center;">#</th>
+                            <th style="text-align: right;">اسم العضو</th>
+                            <th style="width: 110px; text-align: center;">حالة السداد</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rep-tbody"></tbody>
+                </table>
+
+                <div class="signatures">
+                    <div class="sig">
+                        <div>توقيع أمين الصندوق</div>
+                        <div class="sig-line"></div>
+                    </div>
+                    <div class="sig">
+                        <div>توقيع نائب الرئيس</div>
+                        <div class="sig-line"></div>
+                    </div>
+                    <div class="sig">
+                        <div>توقيع رئيس الفريق</div>
+                        <div class="sig-line"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const FEE_PER_MEMBER = 5; // قيمة الاشتراك بالريال العماني
+
+        const members = [
+            { name: "سالم سعيد", paid: false }, { name: "عبدالله سعيد", paid: false },
+            { name: "وليد سعيد", paid: false }, { name: "محمد ابو تركي", paid: false },
+            { name: "احمد الخان", paid: false }, { name: "احمد ع الخان", paid: false },
+            { name: "عبدالرحمن الخان", paid: false }, { name: "فهد الخان", paid: false },
+            { name: "عوف الخان", paid: false }, { name: "حسين سويلم", paid: false },
+            { name: "ابراهيم سويلم", paid: false }, { name: "محمد سويلم", paid: false },
+            { name: "محمد علي", paid: true }, { name: "خالد علي", paid: false },
+            { name: "سعيد عبدالله", paid: false }, { name: "محمد عبدالله", paid: false },
+            { name: "سالم العاقور", paid: true }, { name: "عيسى العاقور", paid: true },
+            { name: "يوسف العاقور", paid: false }, { name: "معتصم العاقور", paid: false },
+            { name: "خالد المسكدي", paid: false }, { name: "علي المسكدي", paid: true },
+            { name: "محمد المسكدي", paid: false }, { name: "عبدالله يوسف", paid: false },
+            { name: "ابراهيم سالم", paid: true }, { name: "علي سالم", paid: false },
+            { name: "عيسى جمعة", paid: false }, { name: "احمد البرختي", paid: true },
+            { name: "ماجد الهدابي", paid: false }, { name: "عيسى عبدالله سالم", paid: true },
+            { name: "عيسى خلفان", paid: true }, { name: "محمد الدرمكي", paid: false },
+            { name: "عيسى علي", paid: true }, { name: "خالد الشيخ", paid: false },
+            { name: "هارون احمد", paid: false }, { name: "احمد الهدابي", paid: false },
+            { name: "عادل خلفان", paid: false }, { name: "يحيي سالم", paid: true },
+            { name: "المومن", paid: true }, { name: "عبدالله صالح", paid: false },
+            { name: "عيسى صالح", paid: false }, { name: "احمد سعيد", paid: false },
+            { name: "محمد كارلوس", paid: false }, { name: "احمد حسن حبيب", paid: false },
+            { name: "هلال ناصر", paid: false }
+        ];
+
+        function loadData() {
+            const saved = localStorage.getItem('team_subs_v5');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                members.forEach((m, idx) => {
+                    if (parsed[idx] !== undefined) m.paid = parsed[idx];
+                });
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('team_subs_v5', JSON.stringify(members.map(m => m.paid)));
+        }
+
+        function renderList(query = '') {
+            const container = document.getElementById('membersList');
+            container.innerHTML = '';
+
+            members.forEach((m, index) => {
+                if (query && !m.name.includes(query)) return;
+
+                const div = document.createElement('div');
+                div.className = `member-row ${m.paid ? 'paid' : ''}`;
+                div.onclick = () => {
+                    m.paid = !m.paid;
+                    saveData();
+                    renderList(document.getElementById('searchInput').value);
+                    updateStats();
+                };
+
+                div.innerHTML = `
+                    <div class="member-info">
+                        <div class="member-num">${index + 1}</div>
+                        <div class="member-name">${m.name}</div>
+                    </div>
+                    <div class="status-icon ${m.paid ? 'yes' : 'no'}">${m.paid ? '✔ (5 ر.ع)' : '❌'}</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function updateStats() {
+            const total = members.length;
+            const paid = members.filter(m => m.paid).length;
+            const unpaid = total - paid;
+            const percent = total > 0 ? Math.round((paid / total) * 100) : 0;
+
+            // الحسابات المالية
+            const totalTargetMoney = total * FEE_PER_MEMBER;
+            const paidMoney = paid * FEE_PER_MEMBER;
+            const unpaidMoney = unpaid * FEE_PER_MEMBER;
+
+            // 1. تحديث الشاشة الداكنة
+            const darkTotal = document.getElementById('dark-total');
+            if (darkTotal) darkTotal.innerText = total;
+
+            const darkTargetMoney = document.getElementById('dark-target-money');
+            if (darkTargetMoney) darkTargetMoney.innerText = `${totalTargetMoney} ر.ع`;
+            
+            const darkPaid = document.getElementById('dark-paid');
+            if (darkPaid) darkPaid.innerText = paid;
+
+            const darkPaidMoney = document.getElementById('dark-paid-money');
+            if (darkPaidMoney) darkPaidMoney.innerText = `${paidMoney} ر.ع`;
+            
+            const darkUnpaid = document.getElementById('dark-unpaid');
+            if (darkUnpaid) darkUnpaid.innerText = unpaid;
+
+            const darkUnpaidMoney = document.getElementById('dark-unpaid-money');
+            if (darkUnpaidMoney) darkUnpaidMoney.innerText = `${unpaidMoney} ر.ع`;
+
+            // 2. تحديث الورقة البيضاء
+            const dateStr = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+            
+            const repDate = document.getElementById('rep-date');
+            if (repDate) repDate.innerHTML = `📅 التاريخ: ${dateStr}`;
+
+            const repPercent = document.getElementById('rep-percent');
+            if (repPercent) repPercent.innerText = `نسبة الإنجاز: %${percent}`;
+            
+            const repPaid = document.getElementById('rep-paid');
+            if (repPaid) repPaid.innerText = paid;
+
+            const repUnpaid = document.getElementById('rep-unpaid');
+            if (repUnpaid) repUnpaid.innerText = unpaid;
+            
+            const repPaidMoney = document.getElementById('rep-paid-money');
+            if (repPaidMoney) repPaidMoney.innerText = `${paidMoney} ر.ع`;
+
+            const repUnpaidMoney = document.getElementById('rep-unpaid-money');
+            if (repUnpaidMoney) repUnpaidMoney.innerText = `${unpaidMoney} ر.ع`;
+
+            const tbody = document.getElementById('rep-tbody');
+            if (tbody) {
+                tbody.innerHTML = '';
+                members.forEach((m, i) => {
+                    const tr = document.createElement('tr');
+                    tr.className = m.paid ? 'paid-row' : 'unpaid-row';
+                    tr.innerHTML = `
+                        <td style="text-align:center;">${i + 1}</td>
+                        <td>${m.name}</td>
+                        <td class="${m.paid ? 'tag-yes' : 'tag-no'}">${m.paid ? '✓ تم (5 ر.ع)' : '✗ لم يدفع'}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+
+            if (tab === 'edit') {
+                document.getElementById('btn-tab-edit').classList.add('active');
+                document.getElementById('view-edit').classList.add('active');
+            } else {
+                document.getElementById('btn-tab-preview').classList.add('active');
+                document.getElementById('view-preview').classList.add('active');
+                updateStats(); // تحديث الورقة فور الدخول إليها
+            }
+        }
+
+        function resetData() {
+            if(confirm("⚠️ تحذير!\nهل أنت متأكد من مسح جميع المدفوعات وتصفير المبالغ؟\nلا يمكن التراجع عن هذا الإجراء.")) {
+                members.forEach(m => m.paid = false);
+                saveData();
+                renderList();
+                updateStats();
+            }
+        }
+
+        function exportPDF() {
+            const element = document.getElementById('reportContent');
+            if (typeof html2pdf === 'undefined') { window.print(); return; }
+            const opt = {
+                margin: [5, 5, 5, 5],
+                filename: 'تقرير_الاشتراكات_المالية.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(element).save();
+        }
+
+        function shareWhatsAppText() {
+            const total = members.length;
+            const paidList = members.filter(m => m.paid);
+            const unpaidList = members.filter(m => !m.paid);
+            
+            const totalTarget = total * FEE_PER_MEMBER;
+            const paidMoney = paidList.length * FEE_PER_MEMBER;
+            const unpaidMoney = unpaidList.length * FEE_PER_MEMBER;
+            const percent = Math.round((paidList.length / total) * 100);
+
+            let msg = `⚽ *تقرير الاشتراكات الشهرية للفريق*\n`;
+            msg += `💵 *قيمة الاشتراك:* 5 ريال عماني\n`;
+            msg += `-----------------------------------\n`;
+            msg += `📊 *إجمالي الأعضاء:* ${total}\n`;
+            msg += `💰 *المبلغ المحصل:* ${paidMoney} ر.ع (${percent}%)\n`;
+            msg += `⏳ *المبلغ المتبقي:* ${unpaidMoney} ر.ع من أصل ${totalTarget} ر.ع\n`;
+            msg += `-----------------------------------\n\n`;
+            
+            msg += `✅ *قائمة المسددين (${paidList.length}):*\n`;
+            paidList.length ? paidList.forEach((m, i) => msg += `${i+1}. ${m.name}\n`) : msg += `لا يوجد مسددين حتى الآن.\n`;
+            
+            msg += `\n❌ *قائمة المتبقين (${unpaidList.length}):*\n`;
+            unpaidList.length ? unpaidList.forEach((m, i) => msg += `${i+1}. ${m.name}\n`) : msg += `الجميع قاموا بالسداد 🎉\n`;
+
+            window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+        }
+
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            renderList(e.target.value);
+        });
+
+        loadData();
+        renderList();
+        updateStats();
+
+        // تسجيل Service Worker لتفعيل العمل بدون إنترنت والتثبيت كتطبيق
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => {
+                    console.log('فشل تسجيل Service Worker:', err);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
